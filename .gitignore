@@ -20,7 +20,7 @@ Icon
 *.class
 
 # Package Files #
-*.jar
+# *.jar
 *.war
 *.ear
 
@@ -34,3 +34,4 @@ Desktop.ini
 
 # Recycle Bin used on file shares
 $RECYCLE.BIN/
+/Dashboard/dist/
