@@ -17,6 +17,8 @@ import edu.wpi.first.wpijavacv.WPIPolygon;
  */
 public class VisonExtension extends WPICameraExtension {
 
+    
+    /*
     private final NumberProperty redMax;
     private final NumberProperty redMin;
     private final NumberProperty greenMax;
@@ -107,4 +109,5 @@ public class VisonExtension extends WPICameraExtension {
 
         return rawImage;
     }
+    * */
 }
