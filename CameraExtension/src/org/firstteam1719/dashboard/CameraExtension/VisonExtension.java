@@ -18,7 +18,7 @@ import edu.wpi.first.wpijavacv.WPIPolygon;
 public class VisonExtension extends WPICameraExtension {
 
     
-    /*
+    
     private final NumberProperty redMax;
     private final NumberProperty redMin;
     private final NumberProperty greenMax;
@@ -56,6 +56,7 @@ public class VisonExtension extends WPICameraExtension {
 
     @Override
     public WPIImage processImage(WPIColorImage rawImage) {
+        System.out.println("test");
         WPIBinaryImage redMinImage = rawImage.getRedChannel().getThreshold(redMin.getValue().intValue());
         WPIBinaryImage redMaxImage = rawImage.getRedChannel().getThresholdInverted(redMax.getValue().intValue());
         WPIBinaryImage greenMinImage = rawImage.getGreenChannel().getThreshold(greenMin.getValue().intValue());
@@ -71,6 +72,7 @@ public class VisonExtension extends WPICameraExtension {
         greenMaxImage.dispose();
         blueMinImage.dispose();
         blueMaxImage.dispose();
+        
 //
 //        try {
 //        } catch (Exception e) {
@@ -106,8 +108,8 @@ public class VisonExtension extends WPICameraExtension {
                 rawImage.drawLine(new WPIPoint(0, halfHeight), new WPIPoint(rawImage.getWidth(), halfHeight), this.color, 2);
             }
         }
-
+        
         return rawImage;
     }
-    * */
+    
 }
