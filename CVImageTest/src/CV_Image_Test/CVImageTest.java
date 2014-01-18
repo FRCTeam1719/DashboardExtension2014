@@ -86,9 +86,10 @@ public class CVImageTest extends WPICameraExtension {
 
     public CVImageTest() {
         super();
+        //Create thresholdSlider
         win = new ThresholdSlider();
 
-        System.out.println("main");
+        //Create canvas frames
         morph_result = new CanvasFrame("morph");
         morph_result.setLocation(900, 0);
         morph_result.setSize(300, 200);
@@ -142,11 +143,11 @@ public class CVImageTest extends WPICameraExtension {
         } //while  
     }   //main 
 
-//
+//Image processing loop
     @Override
     public WPIImage processImage(WPIColorImage rawImage) {
         DaisyExtensions.init();
-//
+//Read values from sliders
          if (ThresholdSlider.fileSelected()) {
                 System.out.println("Thresholder Slider.fileselected");
                 validImage = false;
