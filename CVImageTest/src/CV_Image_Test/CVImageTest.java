@@ -1,5 +1,6 @@
 package CV_Image_Test;
 
+import static CV_Image_Test.CVImageTest.win;
 import com.googlecode.javacv.CanvasFrame;
 import com.googlecode.javacv.cpp.opencv_core;
 import com.googlecode.javacv.cpp.opencv_core.*;
@@ -96,7 +97,7 @@ public class CVImageTest extends WPICameraExtension {
         original.setLocation(500, 0);
         original.setSize(300, 200);
 
-        Result = new CanvasFrame("hueWindow");
+        Result = new CanvasFrame("Result");
         Result.setLocation(700, 200);
         Result.setSize(300, 200);
         hue_frame = new CanvasFrame("hue");
@@ -169,7 +170,7 @@ public class CVImageTest extends WPICameraExtension {
             
 
         } //if  
-        System.out.println("processsImages");
+        
         if (size == null || size.width() != rawImage.getWidth() || size.height() != rawImage.getHeight()) {
             size = opencv_core.cvSize(rawImage.getWidth(), rawImage.getHeight());
             bin = IplImage.create(size, 8, 1);
@@ -190,10 +191,10 @@ public class CVImageTest extends WPICameraExtension {
         opencv_imgproc.cvCvtColor(input, hsv, opencv_imgproc.CV_BGR2HSV);
         opencv_core.cvSplit(hsv, hue, sat, val, null);
 
-        // Uncomment the lines below to see intermediate images
-//        hue_frame.showImage(hue.getBufferedImage());
-//        sat_frame.showImage(sat.getBufferedImage());
-//        val_frame.showImage(val.getBufferedImage());
+        //Uncomment the lines below to see intermediate images
+          hue_frame.showImage(hue.getBufferedImage());
+          sat_frame.showImage(sat.getBufferedImage());
+          val_frame.showImage(val.getBufferedImage());
         
         // Threshold each component separately
         // Hue
@@ -231,7 +232,11 @@ public class CVImageTest extends WPICameraExtension {
 //        // Uncomment the next two lines to see the image post-morphology
         morph_result.showImage(bin.getBufferedImage());
         original.showImage(rawImage.getBufferedImage());
-        Result.showImage(hue.getBufferedImage());
+        //Result.showImage(resultImage.getBufferedImage());
+        //hue_frame.showImage(hue.getBufferedImage());
+        //sat_frame.showImage(sat.getBufferedImage());
+        //val_frame.showImage(val.getBufferedImage());
+        
 //      
 //        // Find contours
 //        WPIBinaryImage binWpi = DaisyExtensions.makeWPIBinaryImage(bin);
