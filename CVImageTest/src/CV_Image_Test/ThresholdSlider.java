@@ -55,7 +55,7 @@ public class ThresholdSlider extends JFrame implements ChangeListener {
         fc.setFileSelectionMode(JFileChooser.FILES_ONLY);
         file = null;
 
-        hueLowerSlider = new JSlider(0, 255, 35);
+        hueLowerSlider = new JSlider(0, 255, 0);
         hueLowerSlider.setBorder(BorderFactory.createTitledBorder("Hue Lower Threshold Value"));
         hueLowerSlider.setMajorTickSpacing(25);
         hueLowerSlider.setMinorTickSpacing(10);
@@ -63,7 +63,7 @@ public class ThresholdSlider extends JFrame implements ChangeListener {
         hueLowerSlider.setPaintLabels(true);
         hueLowerSlider.addChangeListener(this);
 
-        hueUpperSlider = new JSlider(0, 255, 75);
+        hueUpperSlider = new JSlider(0, 255, 20);
         hueUpperSlider.setBorder(BorderFactory.createTitledBorder("Hue Upper Threshold Value"));
         hueUpperSlider.setMajorTickSpacing(25);
         hueUpperSlider.setMinorTickSpacing(10);
@@ -71,7 +71,7 @@ public class ThresholdSlider extends JFrame implements ChangeListener {
         hueUpperSlider.setPaintLabels(true);
         hueUpperSlider.addChangeListener(this);
 
-        satSlider = new JSlider(0, 255, 180);
+        satSlider = new JSlider(0, 255, 0);
         satSlider.setBorder(BorderFactory.createTitledBorder("Saturation Threshold Value"));
         satSlider.setMajorTickSpacing(25);
         satSlider.setMinorTickSpacing(5);
@@ -79,7 +79,7 @@ public class ThresholdSlider extends JFrame implements ChangeListener {
         satSlider.setPaintLabels(true);
         satSlider.addChangeListener(this);
 
-        valSlider = new JSlider(0, 255, 100);
+        valSlider = new JSlider(0, 255, 213);
         valSlider.setBorder(BorderFactory.createTitledBorder("Intensity Threshold Value"));
         valSlider.setMajorTickSpacing(25);
         valSlider.setMinorTickSpacing(5);
