@@ -172,7 +172,13 @@ public class ThresholdSlider extends JFrame implements ChangeListener {
 
         sliderStateChanged = false;
     }
-
+    
+    @Override
+    public void setVisible(boolean b){
+        super.setVisible(b);
+        frame.setVisible(b);
+    }
+    
     private void hueLowerTextActionPerformed(java.awt.event.ActionEvent evt) {
         hueLowerSlider.setValue(Integer.valueOf(hueLowerText.getText()));
     }

@@ -1,8 +1,7 @@
 package CV_Image_Test;
 //TODO: Check for Memory Leaks
-//TODO: Check into hue issues
-//TODO: Comment out debug windows
 //TODO: Comments/end bracket notes
+//TODO: Solve hue frame/win mystery
 import static CV_Image_Test.CVImageTest.win;
 import com.googlecode.javacv.CanvasFrame;
 import com.googlecode.javacv.cpp.opencv_core;
@@ -72,8 +71,6 @@ public class CVImageTest extends WPICameraExtension {
     CanvasFrame val_frame;
     CanvasFrame hue_mask1_win;
     CanvasFrame hue_mask2_win;
-    CanvasFrame sat_thresh;
-    CanvasFrame val_thresh;
     CanvasFrame bin_frame;
     CanvasFrame hsv_frame;
     static ThresholdSlider win;
@@ -90,7 +87,38 @@ public class CVImageTest extends WPICameraExtension {
         win = new ThresholdSlider();
         SmartDashboard.putBoolean("showWin", false);
         //Create canvas frames
-        
+        morph_result = new CanvasFrame("morph");
+        morph_result.setLocation(900, 0);
+        morph_result.setSize(300, 200);
+        hue_win = new CanvasFrame("Hue");
+        hue_win.setLocation(700, 200);
+        hue_win.setSize(300, 200);
+        hue_frame = new CanvasFrame("hue");
+        hue_frame.setLocation(0, 300);
+        sat_frame = new CanvasFrame("Sat");
+        sat_frame.setLocation(0, 0);
+        val_frame = new CanvasFrame("Val");
+        val_frame.setLocation(0, 600);
+        bin_frame = new CanvasFrame("Bin");
+        bin_frame.setLocation(0, 640);
+        hue_mask1_win = new CanvasFrame("Hue Mask 1");
+        hue_mask1_win.setLocation(300, 300);
+        hue_mask2_win = new CanvasFrame("hue Mask 2");
+        hue_mask2_win.setLocation(600, 300);
+        hsv_frame = new CanvasFrame("HSV");
+        hsv_frame.setLocation(400, 400);
+
+        //Hide all windows by default
+        morph_result.setVisible(false);
+        hue_win.setVisible(false);
+        hue_frame.setVisible(false);
+        sat_frame.setVisible(false);
+        val_frame.setVisible(false);
+        bin_frame.setVisible(false);
+        hue_mask1_win.setVisible(false);
+        hue_mask2_win.setVisible(false);
+        hsv_frame.setVisible(false);
+        win.setVisible(false);
 
 
 
@@ -119,44 +147,51 @@ public class CVImageTest extends WPICameraExtension {
 
         } //while  
     }   //main 
-
 //Image processing loop
+    boolean lastFrame = false;
+
     @Override
     public WPIImage processImage(WPIColorImage rawImage) {
         DaisyExtensions.init();
-        
+
         //Check if windows should be displayed
-        if(SmartDashboard.getBoolean("showWin")){
-        morph_result = new CanvasFrame("morph");
-        morph_result.setLocation(900, 0);
-        morph_result.setSize(300, 200);
-        hue_win = new CanvasFrame("Hue");
-        hue_win.setLocation(700, 200);
-        hue_win.setSize(300, 200);
-        hue_frame = new CanvasFrame("hue");
-        hue_frame.setLocation(0, 300);
-        sat_frame = new CanvasFrame("Sat");
-        sat_frame.setLocation(0, 0);
-        val_frame = new CanvasFrame("Val");
-        val_frame.setLocation(0, 600);
-        bin_frame = new CanvasFrame("Bin");
-        bin_frame.setLocation(0, 640);
-        hue_mask1_win = new CanvasFrame("Hue Mask 1");
-        hue_mask1_win.setLocation(300, 300);
-        sat_thresh = new CanvasFrame("Sat Thresh");
-        sat_thresh.setLocation(300, 0);
-        val_thresh = new CanvasFrame("Val Thresh");
-        val_thresh.setLocation(300, 600);
-        hue_mask2_win = new CanvasFrame("hue Mask 2");
-        hue_mask2_win.setLocation(600, 300);
-        hsv_frame = new CanvasFrame("HSV");
-        hsv_frame.setLocation(400, 400);
+
+
+        boolean thisFrame = SmartDashboard.getBoolean("showWin");
+
+
+
+        if (thisFrame != lastFrame && thisFrame) {
+
+            morph_result.setVisible(true);
+            hue_win.setVisible(true);
+            hue_frame.setVisible(true);
+            sat_frame.setVisible(true);
+            val_frame.setVisible(true);
+            bin_frame.setVisible(true);
+            hue_mask1_win.setVisible(true);
+            hue_mask2_win.setVisible(true);
+            hsv_frame.setVisible(true);
+            win.setVisible(true);
+
         }//if
-        
-        
-        
-        
-        
+        if (thisFrame != lastFrame && !thisFrame) {
+            morph_result.setVisible(false);
+            hue_win.setVisible(false);
+            hue_frame.setVisible(false);
+            sat_frame.setVisible(false);
+            val_frame.setVisible(false);
+            bin_frame.setVisible(false);
+            hue_mask1_win.setVisible(false);
+            hue_mask2_win.setVisible(false);
+            hsv_frame.setVisible(false);
+            win.setVisible(false);
+        }
+        lastFrame = thisFrame;
+
+
+
+
 //Read values from sliders
         if (ThresholdSlider.fileSelected()) {
             System.out.println("Thresholder Slider.fileselected");
@@ -205,11 +240,11 @@ public class CVImageTest extends WPICameraExtension {
 //        // Convert to HSV color space and split into components
         opencv_imgproc.cvCvtColor(input, hsv, opencv_imgproc.CV_BGR2HSV);
         opencv_core.cvSplit(hsv, hue, sat, val, null);
-        
+
         //Show windows if necessary
-        if(SmartDashboard.getBoolean("showWin")){
-        hsv_frame.showImage(hsv.getBufferedImage());
-        hue_win.showImage(hue.getBufferedImage());
+        if (SmartDashboard.getBoolean("showWin")) {
+            hsv_frame.showImage(hsv.getBufferedImage());
+            hue_win.showImage(hue.getBufferedImage());
         };
         //Uncomment the lines below to see intermediate images
 
@@ -231,11 +266,11 @@ public class CVImageTest extends WPICameraExtension {
 
         // Value
         opencv_imgproc.cvThreshold(val, val_mask, ThresholdSlider.valSlider.getValue(), 255, opencv_imgproc.CV_THRESH_BINARY); // brightest is larger #
-        
-        if(SmartDashboard.getBoolean("showWin")){
-        //Display hue masks before anding
-        hue_mask1_win.showImage(hue_mask.getBufferedImage());
-        hue_mask2_win.showImage(hue_mask2.getBufferedImage());
+
+        if (SmartDashboard.getBoolean("showWin")) {
+            //Display hue masks before anding
+            hue_mask1_win.showImage(hue_mask.getBufferedImage());
+            hue_mask2_win.showImage(hue_mask2.getBufferedImage());
         }//if
         // Combine the results to obtain our binary image which should for the most
         // part only contain pixels that we care about
@@ -249,24 +284,24 @@ public class CVImageTest extends WPICameraExtension {
         // Uncomment the line below to see resultant image after masking
 //        result.showImage(bin.getBufferedImage());
 
-        
-        
-        if(SmartDashboard.getBoolean("showWin")){
-        //Show bin and hue before morphology is applied
-        bin_frame.showImage(bin.getBufferedImage());
-        hue_frame.showImage(hue_mask.getBufferedImage());
+
+
+        if (SmartDashboard.getBoolean("showWin")) {
+            //Show bin and hue before morphology is applied
+            bin_frame.showImage(bin.getBufferedImage());
+            hue_frame.showImage(hue_mask.getBufferedImage());
         }
 //        // Fill in any gaps using binary morphology
         opencv_imgproc.cvMorphologyEx(bin, bin, null, morphKernel, opencv_imgproc.CV_MOP_CLOSE, kHoleClosingIterations);
 //
 //        
-        
-        if(SmartDashboard.getBoolean("showWin")){
-        //show morphology 
-        morph_result.showImage(bin.getBufferedImage());
-        //Display saturation and value masks
-        sat_frame.showImage(sat_mask.getBufferedImage());
-        val_frame.showImage(val_mask.getBufferedImage());
+
+        if (SmartDashboard.getBoolean("showWin")) {
+            //show morphology 
+            morph_result.showImage(bin.getBufferedImage());
+            //Display saturation and value masks
+            sat_frame.showImage(sat_mask.getBufferedImage());
+            val_frame.showImage(val_mask.getBufferedImage());
         }//if
         //Find Contours
         WPIBinaryImage binWpi = DaisyExtensions.makeWPIBinaryImage(bin);
