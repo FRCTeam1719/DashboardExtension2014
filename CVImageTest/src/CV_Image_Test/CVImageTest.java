@@ -7,6 +7,7 @@ import com.googlecode.javacv.cpp.opencv_core;
 import com.googlecode.javacv.cpp.opencv_core.*;
 import com.googlecode.javacv.cpp.opencv_imgproc;
 import com.googlecode.javacv.cpp.opencv_imgproc.*;
+import com.googlecode.javacv.cpp.opencv_objdetect;
 import edu.wpi.first.smartdashboard.camera.WPICameraExtension;
 import edu.wpi.first.wpijavacv.DaisyExtensions;
 import edu.wpi.first.wpijavacv.WPIColor;
@@ -59,7 +60,8 @@ public class CVImageTest extends WPICameraExtension {
     private static WPIPoint hLinePt4;
     private static int horizontalOffsetPixels;
     //Canvas Framses for results
-    static CanvasFrame Result;
+    //TODO: Clenan up frames
+    static CanvasFrame hue_win;
     static CanvasFrame morph_result;
     static CanvasFrame original;
     CanvasFrame hue_frame;
@@ -70,6 +72,7 @@ public class CVImageTest extends WPICameraExtension {
     CanvasFrame sat_thresh;
     CanvasFrame val_thresh;
     CanvasFrame bin_frame;
+    CanvasFrame hsv_frame;
     static ThresholdSlider win;
     static File file;
     static WPIColorImage rawImage = null;
@@ -90,9 +93,9 @@ public class CVImageTest extends WPICameraExtension {
         original.setLocation(500, 0);
         original.setSize(300, 200);
 
-        Result = new CanvasFrame("Result");
-        Result.setLocation(700, 200);
-        Result.setSize(300, 200);
+        hue_win = new CanvasFrame("Hue");
+        hue_win.setLocation(700, 200);
+        hue_win.setSize(300, 200);
         hue_frame = new CanvasFrame("hue");
         hue_frame.setLocation(0, 300);
         sat_frame = new CanvasFrame("Sat");
@@ -109,7 +112,9 @@ public class CVImageTest extends WPICameraExtension {
         val_thresh.setLocation(300, 600);
         hue_mask2_win = new CanvasFrame("hue Mask 2");
         hue_mask2_win.setLocation(600, 300);
-
+        hsv_frame = new CanvasFrame("HSV");
+        hsv_frame.setLocation(400, 400);
+        
 
 
 
@@ -122,7 +127,7 @@ public class CVImageTest extends WPICameraExtension {
             // Process image
             resultImage = processImage(rawImage);
             // Display results
-            Result.showImage(resultImage.getBufferedImage());
+            hue_win.showImage(resultImage.getBufferedImage());
         } //if
 
         if (validImage && ThresholdSlider.get_imageUpdate()) {
@@ -132,7 +137,7 @@ public class CVImageTest extends WPICameraExtension {
             resultImage = processImage(rawImage);
 
             // Display results
-            Result.showImage(resultImage.getBufferedImage());
+            hue_win.showImage(resultImage.getBufferedImage());
 
 
         } //while  
@@ -190,7 +195,9 @@ public class CVImageTest extends WPICameraExtension {
 //        // Convert to HSV color space and split into components
         opencv_imgproc.cvCvtColor(input, hsv, opencv_imgproc.CV_BGR2HSV);
         opencv_core.cvSplit(hsv, hue, sat, val, null);
-
+        hsv_frame.showImage(hsv.getBufferedImage());
+        hue_win.showImage(hue.getBufferedImage());
+        
         //Uncomment the lines below to see intermediate images
 
 
@@ -200,7 +207,7 @@ public class CVImageTest extends WPICameraExtension {
         // a threshold and inverted threshold in order to get points that are in a narrow range
         // values above threshold are converted to white(255) and values below are converted to black(0)
         //red is 0 to maybe 45.  green 50-75 range
-        //
+        
         //Hue
         opencv_imgproc.cvThreshold(hue, hue_mask, ThresholdSlider.hueLowerSlider.getValue(), 255, opencv_imgproc.CV_THRESH_BINARY); //everything above here we want
 
@@ -222,7 +229,7 @@ public class CVImageTest extends WPICameraExtension {
         opencv_core.cvAnd(hue_mask, bin, bin, null);
         opencv_core.cvAnd(bin, sat_mask, bin, null);
         opencv_core.cvAnd(bin, val_mask, bin, null);
-
+        
 
         // Uncomment the line below to see resultant image after masking
 //        result.showImage(bin.getBufferedImage());
@@ -237,11 +244,11 @@ public class CVImageTest extends WPICameraExtension {
 
         morph_result.showImage(bin.getBufferedImage());
         original.showImage(rawImage.getBufferedImage());
-
+        
         //Display sat and val channals
         sat_frame.showImage(sat_mask.getBufferedImage());
         val_frame.showImage(val_mask.getBufferedImage());
-
+        opencv_objdetect.cvHaarDetectObjects(bin, 1, 0, 0, new CvSize(0,0), CvSize.ZERO);
 
 //      
 //        // Find contours
