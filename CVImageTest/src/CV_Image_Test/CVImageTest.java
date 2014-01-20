@@ -88,37 +88,9 @@ public class CVImageTest extends WPICameraExtension {
         super();
         //Create thresholdSlider
         win = new ThresholdSlider();
-        SmartDashboard.putBoolean("windows?", false);
+        SmartDashboard.putBoolean("showWin", false);
         //Create canvas frames
-        morph_result = new CanvasFrame("morph");
-        morph_result.setLocation(900, 0);
-        morph_result.setSize(300, 200);
-
-        original = new CanvasFrame("Original");
-        original.setLocation(500, 0);
-        original.setSize(300, 200);
-
-        hue_win = new CanvasFrame("Hue");
-        hue_win.setLocation(700, 200);
-        hue_win.setSize(300, 200);
-        hue_frame = new CanvasFrame("hue");
-        hue_frame.setLocation(0, 300);
-        sat_frame = new CanvasFrame("Sat");
-        sat_frame.setLocation(0, 0);
-        val_frame = new CanvasFrame("Val");
-        val_frame.setLocation(0, 600);
-        bin_frame = new CanvasFrame("Bin");
-        bin_frame.setLocation(0, 640);
-        hue_mask1_win = new CanvasFrame("Hue Mask 1");
-        hue_mask1_win.setLocation(300, 300);
-        sat_thresh = new CanvasFrame("Sat Thresh");
-        sat_thresh.setLocation(300, 0);
-        val_thresh = new CanvasFrame("Val Thresh");
-        val_thresh.setLocation(300, 600);
-        hue_mask2_win = new CanvasFrame("hue Mask 2");
-        hue_mask2_win.setLocation(600, 300);
-        hsv_frame = new CanvasFrame("HSV");
-        hsv_frame.setLocation(400, 400);
+        
 
 
 
@@ -152,6 +124,39 @@ public class CVImageTest extends WPICameraExtension {
     @Override
     public WPIImage processImage(WPIColorImage rawImage) {
         DaisyExtensions.init();
+        
+        //Check if windows should be displayed
+        if(SmartDashboard.getBoolean("showWin")){
+        morph_result = new CanvasFrame("morph");
+        morph_result.setLocation(900, 0);
+        morph_result.setSize(300, 200);
+        hue_win = new CanvasFrame("Hue");
+        hue_win.setLocation(700, 200);
+        hue_win.setSize(300, 200);
+        hue_frame = new CanvasFrame("hue");
+        hue_frame.setLocation(0, 300);
+        sat_frame = new CanvasFrame("Sat");
+        sat_frame.setLocation(0, 0);
+        val_frame = new CanvasFrame("Val");
+        val_frame.setLocation(0, 600);
+        bin_frame = new CanvasFrame("Bin");
+        bin_frame.setLocation(0, 640);
+        hue_mask1_win = new CanvasFrame("Hue Mask 1");
+        hue_mask1_win.setLocation(300, 300);
+        sat_thresh = new CanvasFrame("Sat Thresh");
+        sat_thresh.setLocation(300, 0);
+        val_thresh = new CanvasFrame("Val Thresh");
+        val_thresh.setLocation(300, 600);
+        hue_mask2_win = new CanvasFrame("hue Mask 2");
+        hue_mask2_win.setLocation(600, 300);
+        hsv_frame = new CanvasFrame("HSV");
+        hsv_frame.setLocation(400, 400);
+        }//if
+        
+        
+        
+        
+        
 //Read values from sliders
         if (ThresholdSlider.fileSelected()) {
             System.out.println("Thresholder Slider.fileselected");
@@ -200,9 +205,12 @@ public class CVImageTest extends WPICameraExtension {
 //        // Convert to HSV color space and split into components
         opencv_imgproc.cvCvtColor(input, hsv, opencv_imgproc.CV_BGR2HSV);
         opencv_core.cvSplit(hsv, hue, sat, val, null);
+        
+        //Show windows if necessary
+        if(SmartDashboard.getBoolean("showWin")){
         hsv_frame.showImage(hsv.getBufferedImage());
         hue_win.showImage(hue.getBufferedImage());
-
+        };
         //Uncomment the lines below to see intermediate images
 
 
@@ -223,10 +231,12 @@ public class CVImageTest extends WPICameraExtension {
 
         // Value
         opencv_imgproc.cvThreshold(val, val_mask, ThresholdSlider.valSlider.getValue(), 255, opencv_imgproc.CV_THRESH_BINARY); // brightest is larger #
+        
+        if(SmartDashboard.getBoolean("showWin")){
         //Display hue masks before anding
         hue_mask1_win.showImage(hue_mask.getBufferedImage());
         hue_mask2_win.showImage(hue_mask2.getBufferedImage());
-
+        }//if
         // Combine the results to obtain our binary image which should for the most
         // part only contain pixels that we care about
         opencv_core.cvAnd(hue_mask, hue_mask, bin, null);
@@ -239,21 +249,25 @@ public class CVImageTest extends WPICameraExtension {
         // Uncomment the line below to see resultant image after masking
 //        result.showImage(bin.getBufferedImage());
 
+        
+        
+        if(SmartDashboard.getBoolean("showWin")){
         //Show bin and hue before morphology is applied
-        //bin_frame.showImage(bin.getBufferedImage());
-        //hue_frame.showImage(hue_mask.getBufferedImage());
+        bin_frame.showImage(bin.getBufferedImage());
+        hue_frame.showImage(hue_mask.getBufferedImage());
+        }
 //        // Fill in any gaps using binary morphology
         opencv_imgproc.cvMorphologyEx(bin, bin, null, morphKernel, opencv_imgproc.CV_MOP_CLOSE, kHoleClosingIterations);
 //
-//        // Uncomment the next two lines to see the image post-morphology
-
-        //morph_result.showImage(bin.getBufferedImage());
-        //original.showImage(rawImage.getBufferedImage());
-
-        //Display sat and val channals
-        //sat_frame.showImage(sat_mask.getBufferedImage());
-        //val_frame.showImage(val_mask.getBufferedImage());
+//        
         
+        if(SmartDashboard.getBoolean("showWin")){
+        //show morphology 
+        morph_result.showImage(bin.getBufferedImage());
+        //Display saturation and value masks
+        sat_frame.showImage(sat_mask.getBufferedImage());
+        val_frame.showImage(val_mask.getBufferedImage());
+        }//if
         //Find Contours
         WPIBinaryImage binWpi = DaisyExtensions.makeWPIBinaryImage(bin);
         contours = DaisyExtensions.findConvexContours(binWpi);
