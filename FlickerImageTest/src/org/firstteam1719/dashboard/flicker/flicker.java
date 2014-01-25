@@ -42,8 +42,8 @@ public class flicker extends WPICameraExtension {
         super();
 
         //SmartDashboard values
-        SmartDashboard.putBoolean("Camera LED", false);
-        SmartDashboard.putBoolean("Is Camera LED On?", false);
+        SmartDashboard.putBoolean("CameraLED", false);
+        SmartDashboard.putBoolean("CameraLEDOn", false);
 
         //Create  Windows
         subFrame = new CanvasFrame("Subtraction");
@@ -60,13 +60,13 @@ public class flicker extends WPICameraExtension {
     @Override
     public WPIImage processImage(WPIColorImage rawImage) {
         DaisyExtensions.init();
-        if (SmartDashboard.getBoolean("Is Camera LED On?")) {
+        if (SmartDashboard.getBoolean("CameraLEDOn")) {
 
             LEDon = DaisyExtensions.getIplImage(rawImage);
-            SmartDashboard.putBoolean("Camera LED", false);
+            SmartDashboard.putBoolean("CameraLED", false);
         } else {
             LEDoff = DaisyExtensions.getIplImage(rawImage);
-            SmartDashboard.putBoolean("Camera LED", true);
+            SmartDashboard.putBoolean("CameraLED", true);
         }
         if(LEDoff == null || LEDon ==null){
             return rawImage;
