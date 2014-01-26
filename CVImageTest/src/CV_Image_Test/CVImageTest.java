@@ -74,6 +74,9 @@ public class CVImageTest extends WPICameraExtension {
     //Grab Netowrk Table
     public static NetworkTable SmartDashboard = NetworkTable.getTable("SmartDashboard");
 
+    boolean circular;
+    
+    
     public CVImageTest() {
         super();
         //Create thresholdSlider
@@ -113,7 +116,8 @@ public class CVImageTest extends WPICameraExtension {
         hsv_frame.setVisible(false);
         win.setVisible(false);
 
-
+        SmartDashboard.putBoolean("circular", true);
+        circular = SmartDashboard.getBoolean("circular");
 
 
         if (ThresholdSlider.fileSelected()) {
@@ -253,10 +257,7 @@ public class CVImageTest extends WPICameraExtension {
 //        opencv_imgproc.cvThreshold(hue, hue_mask, ThresholdSlider.hueLowerSlider.getValue(), 255, opencv_imgproc.CV_THRESH_BINARY_INV); //everything above here we want
 //
 //        opencv_imgproc.cvThreshold(hue, hue_mask2, ThresholdSlider.hueUpperSlider.getValue(), 255, opencv_imgproc.CV_THRESH_BINARY);
-        opencv_imgproc.cvThreshold(hue, hue_mask, ThresholdSlider.hueLowerSlider.getValue(), 255, opencv_imgproc.CV_THRESH_BINARY); //everything above here we want
-
-        opencv_imgproc.cvThreshold(hue, hue_mask2, ThresholdSlider.hueUpperSlider.getValue(), 255, opencv_imgproc.CV_THRESH_BINARY_INV);
-        
+        hueSlider(circular);
         // Saturation
         opencv_imgproc.cvThreshold(sat, sat_mask, ThresholdSlider.satSlider.getValue(), 255, opencv_imgproc.CV_THRESH_BINARY); // high color sat is larger #
 
@@ -272,7 +273,7 @@ public class CVImageTest extends WPICameraExtension {
         // Combine the results to obtain our binary image which should for the most
         // part only contain pixels that we care about
         
-        opencv_core.cvAnd(hue_mask, hue_mask2, hue_mask, null);
+        combineHue(circular);
         //Initialize bin
         opencv_core.cvAnd(hue_mask, hue_mask, bin, null);
         opencv_core.cvAnd(hue_mask, bin, bin, null);
@@ -324,8 +325,11 @@ public class CVImageTest extends WPICameraExtension {
                 horzfound = true;
             } 
             //Verticle bar
-            if (ratio < 6 && ratio > 2 && c.getHeight() > kMinHeight && c.getWidth() < kMaxHeight ){
-                System.out.println("(vert) ratio = " + ratio + " width = " + c.getWidth() + "   height = " + c.getHeight() + "\n");
+            if(ratio!=1){
+            System.out.println("(vert) ratio = " + ratio + " width = " + c.getWidth() + "   height = " + c.getHeight() + "\n");
+            }
+            if (ratio < 8 && ratio > 2 && c.getHeight() > kMinHeight && c.getWidth() < kMaxHeight ){
+                
                 
                 polygons.add(c.approxPolygon(20));
                 rawImage.drawContour(c, WPIColor.GREEN, 2);
@@ -343,7 +347,7 @@ public class CVImageTest extends WPICameraExtension {
 
         } else if(horzfound && !vertfound) {
             SmartDashboard.putBoolean("found", false);
-            System.out.println("vert not found");
+            System.out.println("vert not found \n");
         } else if(!horzfound && vertfound) {
             System.out.println("horz not found");
             SmartDashboard.putBoolean("found", false);
@@ -363,4 +367,38 @@ public class CVImageTest extends WPICameraExtension {
         
         return rawImage;
     }
+    
+    
+    public void hueSlider(boolean circular){
+        
+        if(circular){
+        opencv_imgproc.cvThreshold(hue, hue_mask, ThresholdSlider.hueLowerSlider.getValue(), 255, opencv_imgproc.CV_THRESH_BINARY); //everything above here we want
+
+        opencv_imgproc.cvThreshold(hue, hue_mask2, ThresholdSlider.hueUpperSlider.getValue(), 255, opencv_imgproc.CV_THRESH_BINARY_INV);
+        }else if(!circular){
+            opencv_imgproc.cvThreshold(hue, hue_mask, ThresholdSlider.hueLowerSlider.getValue(), 255, opencv_imgproc.CV_THRESH_BINARY_INV); //everything above here we want
+
+            opencv_imgproc.cvThreshold(hue, hue_mask2, ThresholdSlider.hueUpperSlider.getValue(), 255, opencv_imgproc.CV_THRESH_BINARY);
+        
+        }
+        
+        
+        
+    }
+    
+    public void combineHue(boolean circular){
+        if(circular){
+            opencv_core.cvOr(hue_mask, hue_mask2, bin, null);
+        }else if (!circular){
+            opencv_core.cvAnd(hue_mask, hue_mask2, bin, null);
+        }
+        
+        
+        
+        
+        
+    }
+    
+    
+    
 }
