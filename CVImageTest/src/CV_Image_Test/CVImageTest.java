@@ -26,21 +26,14 @@ import java.util.ArrayList;
  */
 public class CVImageTest extends WPICameraExtension {
 
-    //public static final String NAME = "WHS Image Test";
-    private static WPIColor targetColor = new WPIColor(0, 255, 0);
-    // Constants that need to be tuned
-    private static final double kNearlyHorizontalSlope = Math.tan(Math.toRadians(20));
-    private static final double kNearlyVerticalSlope = Math.tan(Math.toRadians(90 - 20));
+    //Constants that need to be tuned
     private static final int kMinWidth = 30;
     private static final int kMaxWidth = 100;
-//    private static final double kRangeOffset = 0.0;
-//    private static final int kHoleClosingIterations = 9;
-//    private static final double kShooterOffsetDeg = -1.55;
-//    private static final double kHorizontalFOVDeg = 47.0;
-//    private static final double kVerticalFOVDeg = 480.0 / 640.0 * kHorizontalFOVDeg;
-//    private static final double kCameraHeightIn = 54.0;
-//    private static final double kCameraPitchDeg = 21.0;
-//    private static final double kTopTargetHeightIn = 98.0 + 2.0 + 9.0; // 98 to rim, +2 to bottom of target, +9 to center of targe
+    private static final int kMinHeight = 30;
+    private static final int kMaxHeight = 100;
+    
+    
+//    
     // Store JavaCV temporaries as members to reduce memory management during processing
     private static CvSize size = null;
     private static WPIContour[] contours;
@@ -257,9 +250,13 @@ public class CVImageTest extends WPICameraExtension {
         //red is 0 to maybe 45.  green 50-75 range
 
         //Hue
-        opencv_imgproc.cvThreshold(hue, hue_mask, ThresholdSlider.hueLowerSlider.getValue(), 255, opencv_imgproc.CV_THRESH_BINARY_INV); //everything above here we want
+//        opencv_imgproc.cvThreshold(hue, hue_mask, ThresholdSlider.hueLowerSlider.getValue(), 255, opencv_imgproc.CV_THRESH_BINARY_INV); //everything above here we want
+//
+//        opencv_imgproc.cvThreshold(hue, hue_mask2, ThresholdSlider.hueUpperSlider.getValue(), 255, opencv_imgproc.CV_THRESH_BINARY);
+        opencv_imgproc.cvThreshold(hue, hue_mask, ThresholdSlider.hueLowerSlider.getValue(), 255, opencv_imgproc.CV_THRESH_BINARY); //everything above here we want
 
-        opencv_imgproc.cvThreshold(hue, hue_mask2, ThresholdSlider.hueUpperSlider.getValue(), 255, opencv_imgproc.CV_THRESH_BINARY);
+        opencv_imgproc.cvThreshold(hue, hue_mask2, ThresholdSlider.hueUpperSlider.getValue(), 255, opencv_imgproc.CV_THRESH_BINARY_INV);
+        
         // Saturation
         opencv_imgproc.cvThreshold(sat, sat_mask, ThresholdSlider.satSlider.getValue(), 255, opencv_imgproc.CV_THRESH_BINARY); // high color sat is larger #
 
@@ -275,7 +272,7 @@ public class CVImageTest extends WPICameraExtension {
         // Combine the results to obtain our binary image which should for the most
         // part only contain pixels that we care about
         
-        opencv_core.cvOr(hue_mask, hue_mask2, hue_mask, null);
+        opencv_core.cvAnd(hue_mask, hue_mask2, hue_mask, null);
         //Initialize bin
         opencv_core.cvAnd(hue_mask, hue_mask, bin, null);
         opencv_core.cvAnd(hue_mask, bin, bin, null);
@@ -310,74 +307,60 @@ public class CVImageTest extends WPICameraExtension {
         contours = DaisyExtensions.findConvexContours(binWpi);
 
         polygons = new ArrayList<WPIPolygon>();
-
+        
+        boolean horzfound = false;
+        boolean vertfound = false;
         for (WPIContour c : contours) {
             double ratio = ((double) c.getHeight()) / ((double) c.getWidth());
 
             rawImage.drawContour(c, WPIColor.WHITE, 1);
-            System.out.println("ratio = " + ratio + " width = " + c.getWidth() + "height = " + c.getHeight() );
+            
+            //Horzintal bar
             if (ratio < .4 && ratio > .2 && c.getWidth() > kMinWidth && c.getWidth() < kMaxWidth) {
+     
+                System.out.println("(horz) ratio = " + ratio + " width = " + c.getWidth() + "   height = " + c.getHeight() );
                 polygons.add(c.approxPolygon(20));
                 rawImage.drawContour(c, WPIColor.BLUE, 2);
-            }//if
+                horzfound = true;
+            } 
+            //Verticle bar
+            if (ratio < 6 && ratio > 2 && c.getHeight() > kMinHeight && c.getWidth() < kMaxHeight ){
+                System.out.println("(vert) ratio = " + ratio + " width = " + c.getWidth() + "   height = " + c.getHeight() + "\n");
+                
+                polygons.add(c.approxPolygon(20));
+                rawImage.drawContour(c, WPIColor.GREEN, 2);
+                vertfound = true;
+            }
 
         }//for
-
-        //Find Highest polygon
-        WPIPolygon rectangle = null;
-        int highest = Integer.MAX_VALUE;
-
-        for (WPIPolygon p : polygons){ 
-            int pCenterX = (p.getX() + (p.getWidth() / 2));
-            int pCenterY = (p.getY() + (p.getHeight() / 2));
-
-            if (pCenterY < highest) {
-                rectangle = p;
-                highest = pCenterY;
-                rawImage.drawPoint(new WPIPoint(pCenterX, pCenterY), targetColor, 3);
-            }//if
-        } //for
-
-        if (rectangle != null) {
-            double x = rectangle.getX() + (rectangle.getWidth() / 2);   // x value of center point of rectangle
-            x = 2 * x / size.width() - 1;                           // convert to fraction of screen width off center
-            double y = rectangle.getY() + (rectangle.getHeight() / 2);  // y value of center point of rectangle
-            y = -(2 * y / size.height() - 1);                        // convert to fraction of screen height off center
-
-//            double azimuth = x * kHorizontalFOVDeg / 2.0 - kShooterOffsetDeg;
-//            double elevation = y * kVerticalFOVDeg / 2.0 - kCameraPitchDeg;
-//            //TODO fix range calculation
-//            double range = (kTopTargetHeightIn - kCameraHeightIn) / Math.tan((y * kVerticalFOVDeg / 2.0 + kCameraPitchDeg) * Math.PI / 180.0);
-
+        
+        if (horzfound && vertfound) {
+                              
             SmartDashboard.putBoolean("found", true);
-            //SmartDashboard.putNumber("Az", azimuth);
-            //SmartDashboard.putNumber("El", elevation);
 
-            System.out.println("Target found");
-            System.out.println("x: " + x);
-            //System.out.println("y: " + elevation);
-            //System.out.println("azimuth: " + azimuth);
-            //System.out.println("range: " + range);
+            //System.out.println("Target found");
 
-        } else {
+
+        } else if(horzfound && !vertfound) {
             SmartDashboard.putBoolean("found", false);
-            //SmartDashboard.putNumber("Az", 0);
-            //SmartDashboard.putNumber("El", 0);
-            System.out.println("Target not found");
+            System.out.println("vert not found");
+        } else if(!horzfound && vertfound) {
+            System.out.println("horz not found");
+            SmartDashboard.putBoolean("found", false);
+        }
+        
+        
+        else {
+            SmartDashboard.putBoolean("found", false);
+            
+            System.out.println("Target(s) not founds");
         } //else
 
 
-
-
-
-
-        // Draw a crosshair at screen center
-        //output.drawLine(linePt1, linePt2, targetColor, 2);
-        //output.drawLine(hLinePt3, hLinePt4, targetColor, 2);
-//
+        
         DaisyExtensions.releaseMemory();
-//
-        //System.out.println("rawImage");
+
+        
         return rawImage;
     }
 }
