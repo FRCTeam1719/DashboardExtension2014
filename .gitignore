@@ -35,3 +35,5 @@ Desktop.ini
 # Recycle Bin used on file shares
 $RECYCLE.BIN/
 /Dashboard/dist/
+/PhoenixCV/dist/
+/CameraExtension/dist/
