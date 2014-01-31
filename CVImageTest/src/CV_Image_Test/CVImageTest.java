@@ -1,6 +1,6 @@
 package CV_Image_Test;
 //TODO: Check for Memory Leaks
-//TODO: Comments/end bracket notes
+//TODO: Comments
 //TODO: Solve hue frame/win mystery
 import static CV_Image_Test.CVImageTest.win;
 import com.googlecode.javacv.CanvasFrame;
@@ -149,6 +149,8 @@ public class CVImageTest extends WPICameraExtension {
 
     @Override
     public WPIImage processImage(WPIColorImage rawImage) {
+        //Get start time
+        long startTime = System.nanoTime();
         DaisyExtensions.init();
 
         //Check if windows should be displayed
@@ -311,6 +313,13 @@ public class CVImageTest extends WPICameraExtension {
         
         boolean horzfound = false;
         boolean vertfound = false;
+        //Array for storing X/Y values
+        int positions[] = new int[2];
+        int centerPos = 160;
+        boolean leftHorz = false;
+        boolean rightHorz = false;
+        boolean leftVert = false;
+        boolean rightVert = false;
         for (WPIContour c : contours) {
             double ratio = ((double) c.getHeight()) / ((double) c.getWidth());
 
@@ -318,29 +327,52 @@ public class CVImageTest extends WPICameraExtension {
             
             //Horzintal bar
             if (ratio < .4 && ratio > .2 && c.getWidth() > kMinWidth && c.getWidth() < kMaxWidth) {
-     
-                System.out.println("(horz) ratio = " + ratio + " width = " + c.getWidth() + "   height = " + c.getHeight() );
+                
+                if(c.getX() >= centerPos){
+                    rightHorz = true;
+                } else {
+                    leftHorz = true;
+                }
+                System.out.println("(horz) ratio = " + ratio + " width = " + c.getWidth() + "   height = " + c.getHeight() + " Position  = " + c.getX());
                 polygons.add(c.approxPolygon(20));
                 rawImage.drawContour(c, WPIColor.BLUE, 2);
-                horzfound = true;
+                horzfound = true; 
+                
+                
             } 
             //Verticle bar
             if(ratio!=1){
-            System.out.println("(vert) ratio = " + ratio + " width = " + c.getWidth() + "   height = " + c.getHeight() + "\n");
+            System.out.println("(vert) ratio = " + ratio + " width = " + c.getWidth() + "   height = " + c.getHeight() + "Position = " + c.getX());
             }
             if (ratio < 8 && ratio > 2 && c.getHeight() > kMinHeight && c.getWidth() < kMaxHeight ){
-                
-                
+                if(c.getX() >= centerPos){
+                    rightVert = true;
+                }else {
+                    leftVert = true;
+                }
                 polygons.add(c.approxPolygon(20));
                 rawImage.drawContour(c, WPIColor.GREEN, 2);
                 vertfound = true;
+                
             }
 
+            //Send booleans to smartdashboard
+            //TODO send booleans to the smartdashboard
+            System.out.println("\n");
         }//for
+        
+        
         
         if (horzfound && vertfound) {
                               
             SmartDashboard.putBoolean("found", true);
+            if(rightVert&&rightHorz){
+                SmartDashboard.putString("leftorright", "right");
+            }else if(leftVert&&leftHorz){
+                SmartDashboard.putString("leftorright", "left");
+            }else{
+                SmartDashboard.putString("leftorright", "unknown");
+            }
 
             //System.out.println("Target found");
 
@@ -364,8 +396,11 @@ public class CVImageTest extends WPICameraExtension {
         
         DaisyExtensions.releaseMemory();
 
+        //Read end time
+        System.out.println("Elapsed Loop Time: " + (System.nanoTime() - startTime));
         
         return rawImage;
+        
     }
     
     
