@@ -116,6 +116,7 @@ public class CVImageTest extends WPICameraExtension {
         hsv_frame.setVisible(false);
         win.setVisible(false);
 
+        //Circular or not circular hue slider
         SmartDashboard.putBoolean("circular", true);
         circular = SmartDashboard.getBoolean("circular");
 
@@ -151,17 +152,17 @@ public class CVImageTest extends WPICameraExtension {
     public WPIImage processImage(WPIColorImage rawImage) {
         //Get start time
         long startTime = System.nanoTime();
+        //Initialize Daisy Extnesion
         DaisyExtensions.init();
 
         //Check if windows should be displayed
-
-
         boolean thisFrame = SmartDashboard.getBoolean("showWin");
 
 
 
         if (thisFrame != lastFrame && thisFrame) {
 
+            //Show windows
             morph_result.setVisible(true);
             hue_win.setVisible(true);
             hue_frame.setVisible(true);
@@ -175,6 +176,7 @@ public class CVImageTest extends WPICameraExtension {
 
         }//if
         if (thisFrame != lastFrame && !thisFrame) {
+            //Hide windows
             morph_result.setVisible(false);
             hue_win.setVisible(false);
             hue_frame.setVisible(false);
@@ -203,7 +205,6 @@ public class CVImageTest extends WPICameraExtension {
             // Display results
             //result.showImage(resultImage.getBufferedImage());
         } //if
-
         if (validImage && ThresholdSlider.get_imageUpdate()) {
             ThresholdSlider.reset_imageUpdate();
             System.out.println("validImage");
@@ -227,16 +228,11 @@ public class CVImageTest extends WPICameraExtension {
             hue_mask2 = IplImage.create(size, 8, 1);
             sat_mask = IplImage.create(size, 8, 1);
             val_mask = IplImage.create(size, 8, 1);
-//            horizontalOffsetPixels = (int) Math.round(kShooterOffsetDeg * (size.width() / kHorizontalFOVDeg));
-//            linePt1 = new WPIPoint(size.width() / 2 + horizontalOffsetPixels, size.height() / 2 + 50);
-//            linePt2 = new WPIPoint(size.width() / 2 + horizontalOffsetPixels, size.height() / 2 + 100);
-//            hLinePt3 = new WPIPoint(size.width() / 2 + horizontalOffsetPixels + 25, size.height() / 2 + 75);
-//            hLinePt4 = new WPIPoint(size.width() / 2 + horizontalOffsetPixels - 25, size.height() / 2 + 75);
         } //if
-//        // Get the raw IplImages for OpenCV
+        // Get the raw IplImages for OpenCV
         IplImage input = DaisyExtensions.getIplImage(rawImage);
         WPIColorImage output = new WPIColorImage(rawImage.getBufferedImage());
-//        // Convert to HSV color space and split into components
+        // Convert to HSV color space and split into components
         opencv_imgproc.cvCvtColor(input, hsv, opencv_imgproc.CV_BGR2HSV);
         opencv_core.cvSplit(hsv, hue, sat, val, null);
 
@@ -245,20 +241,13 @@ public class CVImageTest extends WPICameraExtension {
             hsv_frame.showImage(hsv.getBufferedImage());
             hue_win.showImage(hue.getBufferedImage());
         };
-        //Uncomment the lines below to see intermediate images
-
-
-        // Threshold each component separately
-        // Hue
+        
         // NOTE: colors like green in the middle of the color space, require ANDing together
         // a threshold and inverted threshold in order to get points that are in a narrow range
         // values above threshold are converted to white(255) and values below are converted to black(0)
         //red is 0 to maybe 45.  green 50-75 range
-
+        
         //Hue
-//        opencv_imgproc.cvThreshold(hue, hue_mask, ThresholdSlider.hueLowerSlider.getValue(), 255, opencv_imgproc.CV_THRESH_BINARY_INV); //everything above here we want
-//
-//        opencv_imgproc.cvThreshold(hue, hue_mask2, ThresholdSlider.hueUpperSlider.getValue(), 255, opencv_imgproc.CV_THRESH_BINARY);
         hueSlider(circular);
         // Saturation
         opencv_imgproc.cvThreshold(sat, sat_mask, ThresholdSlider.satSlider.getValue(), 255, opencv_imgproc.CV_THRESH_BINARY); // high color sat is larger #
@@ -278,6 +267,7 @@ public class CVImageTest extends WPICameraExtension {
         combineHue(circular);
         //Initialize bin
         opencv_core.cvAnd(hue_mask, hue_mask, bin, null);
+        //Combine images
         opencv_core.cvAnd(hue_mask, bin, bin, null);
         opencv_core.cvAnd(bin, sat_mask, bin, null);
         opencv_core.cvAnd(bin, val_mask, bin, null);
@@ -293,11 +283,8 @@ public class CVImageTest extends WPICameraExtension {
             bin_frame.showImage(bin.getBufferedImage());
             hue_frame.showImage(hue_mask.getBufferedImage());
         }
-//        // Fill in any gaps using binary morphology
-        //opencv_imgproc.cvMorphologyEx(bin, bin, null, morphKernel, opencv_imgproc.CV_MOP_CLOSE, kHoleClosingIterations);
-//
-//        
-
+       
+        //Show windows if necessary
         if (SmartDashboard.getBoolean("showWin")) {
             //show morphology 
             morph_result.showImage(bin.getBufferedImage());
@@ -309,63 +296,75 @@ public class CVImageTest extends WPICameraExtension {
         WPIBinaryImage binWpi = DaisyExtensions.makeWPIBinaryImage(bin);
         contours = DaisyExtensions.findConvexContours(binWpi);
 
+        //Array for storying contours that match our ratios
         polygons = new ArrayList<WPIPolygon>();
         
-        boolean horzfound = false;
-        boolean vertfound = false;
+        
         //Array for storing X/Y values
         int positions[] = new int[2];
+        //Boolean for the Xc center of the image
         int centerPos = 160;
+        //Boolean for finding objects
+        boolean horzfound = false;
+        boolean vertfound = false;
         boolean leftHorz = false;
         boolean rightHorz = false;
         boolean leftVert = false;
         boolean rightVert = false;
+        //Check if any of our contrours match
         for (WPIContour c : contours) {
+            //Ratios
             double ratio = ((double) c.getHeight()) / ((double) c.getWidth());
-
+            //Draw all contours whte
             rawImage.drawContour(c, WPIColor.WHITE, 1);
             
-            //Horzintal bar
+            //Check if it matches the ratio and width meet the horizontal bar
             if (ratio < .4 && ratio > .2 && c.getWidth() > kMinWidth && c.getWidth() < kMaxWidth) {
-                
+                //Check if it's on the left or the right
                 if(c.getX() >= centerPos){
                     rightHorz = true;
                 } else {
                     leftHorz = true;
                 }
+                
                 System.out.println("(horz) ratio = " + ratio + " width = " + c.getWidth() + "   height = " + c.getHeight() + " Position  = " + c.getX());
+                //Add this contour to the polygon array
                 polygons.add(c.approxPolygon(20));
+                //Draw this contour blue
                 rawImage.drawContour(c, WPIColor.BLUE, 2);
                 horzfound = true; 
                 
                 
             } 
-            //Verticle bar
+            //Check if contour matches the ratioj and height for the verticle bar
             if(ratio!=1){
             System.out.println("(vert) ratio = " + ratio + " width = " + c.getWidth() + "   height = " + c.getHeight() + "Position = " + c.getX());
             }
             if (ratio < 8 && ratio > 2 && c.getHeight() > kMinHeight && c.getWidth() < kMaxHeight ){
+                //Check if it's on the left or the right
                 if(c.getX() >= centerPos){
                     rightVert = true;
                 }else {
                     leftVert = true;
                 }
+                //Add to the polygon array
                 polygons.add(c.approxPolygon(20));
+                //Draw it green
                 rawImage.drawContour(c, WPIColor.GREEN, 2);
                 vertfound = true;
                 
             }
 
-            //Send booleans to smartdashboard
-            //TODO send booleans to the smartdashboard
+            //Line break in the printstream
             System.out.println("\n");
         }//for
         
         
-        
+        //If it finds both bars
         if (horzfound && vertfound) {
                               
             SmartDashboard.putBoolean("found", true);
+            //Left or right logic
             if(rightVert&&rightHorz){
                 SmartDashboard.putString("leftorright", "right");
             }else if(leftVert&&leftHorz){
@@ -373,10 +372,7 @@ public class CVImageTest extends WPICameraExtension {
             }else{
                 SmartDashboard.putString("leftorright", "unknown");
             }
-
-            //System.out.println("Target found");
-
-
+            //Tell us which bar we are not fiding
         } else if(horzfound && !vertfound) {
             SmartDashboard.putBoolean("found", false);
             System.out.println("vert not found \n");
@@ -393,7 +389,7 @@ public class CVImageTest extends WPICameraExtension {
         } //else
 
 
-        
+        //Release memory
         DaisyExtensions.releaseMemory();
 
         //Read end time
@@ -403,7 +399,7 @@ public class CVImageTest extends WPICameraExtension {
         
     }
     
-    
+    //Circular hue slider methods
     public void hueSlider(boolean circular){
         
         if(circular){
