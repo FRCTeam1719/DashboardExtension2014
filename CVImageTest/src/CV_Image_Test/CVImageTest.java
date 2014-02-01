@@ -1,7 +1,6 @@
 package CV_Image_Test;
 //TODO: Check for Memory Leaks
-//TODO: Comments
-//TODO: Solve hue frame/win mystery
+
 import static CV_Image_Test.CVImageTest.win;
 import com.googlecode.javacv.CanvasFrame;
 import com.googlecode.javacv.cpp.opencv_core;
