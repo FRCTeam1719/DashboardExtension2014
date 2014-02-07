@@ -38,7 +38,7 @@ public class VisonExtension extends WPICameraExtension {
     
 
     public VisonExtension() {
-       
+       //Create canvas frames
         morph_result = new CanvasFrame("morph");
         morph_result.setLocation(900, 0);
         bin_img = new CanvasFrame("bin");
@@ -68,10 +68,11 @@ public class VisonExtension extends WPICameraExtension {
         opencv_core.cvSplit(hsv, hue, sat, val, null);
         
         
-        opencv_imgproc.cvThreshold(hue, bin, 25, 255, opencv_imgproc.CV_THRESH_BINARY); //everything we don't want for red
+        opencv_imgproc.cvThreshold(hue, bin, 174, 230, opencv_imgproc.CV_THRESH_BINARY); //everything we don't want for red
         //hue_thresh.showImage(bin.getBufferedImage());
-        opencv_imgproc.cvThreshold(hue, hue, 45, 255, opencv_imgproc.CV_THRESH_BINARY_INV); //everything we do want for red
+        //opencv_imgproc.cvThreshold(hue, hue, 174, 255, opencv_imgproc.CV_THRESH_BINARY_INV); //everything we do want for red
 //        hue_thresh2.showImage(hue.getBufferedImage());
+        
         //Applying thresholds
         //pencv_imgproc.cvThreshold(hue, bin,  36, 255, opencv_imgproc.CV_THRESH_BINARY);
         
