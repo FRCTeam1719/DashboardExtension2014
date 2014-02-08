@@ -2,13 +2,14 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package org.firstteam1719.dashboard.verticalebar;
+package org.firstteam1719.dashboard.cameraController;
 
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.CredentialsProvider;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
@@ -33,7 +34,7 @@ public class HttpWraper {
         try {
             
             HttpGet httpGet = new HttpGet(url);
-            httpClient.execute(httpGet);
+            httpClient.execute((HttpUriRequest) httpGet);
             
         } catch (ClientProtocolException e) {
            //cammera sends back invalid headers
