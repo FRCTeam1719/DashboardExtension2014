@@ -16,41 +16,43 @@ import edu.wpi.first.wpijavacv.WPIContour;
 import edu.wpi.first.wpijavacv.WPIImage;
 import edu.wpi.first.wpijavacv.WPIPolygon;
 import edu.wpi.first.wpilibj.networktables.NetworkTable;
-import java.io.File;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 public class CVImageTest extends WPICameraExtension {
 
     //Constants that need to be tuned
-    private static final int kMinWidth = 30;
-    private static final int kMaxWidth = 100;
-    private static final int kMinHeight = 30;
-    private static final int kMaxHeight = 100;
+    private final int horzMinWidth = 30;
+    private final int horzMinHeight = 100;
+    private final int vertMinHeight = 30;
+    private final int vertMaxHeight = 100;
+    private final int centerPos = 160;
+    private final double horzMinRatio=.1;
+    private final double horzMaxRatio=.4;
+    private final double vertMinRatio=2;
+    private final double vertMaxRatio=8.5;
 
     // Store JavaCV temporaries as members to reduce memory management during processing
-    private static CvSize size = null;
-    private static WPIContour[] contours;
-    private static ArrayList<WPIPolygon> polygons;
-    private static IplConvKernel morphKernel = IplConvKernel.create(3, 3, 1, 1, opencv_imgproc.CV_SHAPE_RECT, null);
-    private static IplImage bin;
-    private static IplImage hsv;
-    private static IplImage hue;
-    private static IplImage sat;
-    private static IplImage val;
+    private CvSize size = null;
+    private WPIContour[] contours;
+    private ArrayList<WPIPolygon> polygons;
+    private IplConvKernel morphKernel = IplConvKernel.create(3, 3, 1, 1, opencv_imgproc.CV_SHAPE_RECT, null);
+    private IplImage bin;
+    private IplImage hsv;
+    private IplImage hue;
+    private IplImage sat;
+    private IplImage val;
     //Mask Images
-    private static IplImage hue_mask;
-    private static IplImage hue_mask2;
-    private static IplImage sat_mask;
-    private static IplImage val_mask;
+    private IplImage hue_mask;
+    private IplImage hue_mask2;
+    private IplImage sat_mask;
+    private IplImage val_mask;
     //Canvas Framses for results
-    static CanvasFrame hue_win;
-    static CanvasFrame morph_result;
-    static CanvasFrame original;
+    CanvasFrame hue_win;
+    CanvasFrame morph_result;
+    CanvasFrame original;
     CanvasFrame hue_frame;
     CanvasFrame sat_frame;
     CanvasFrame val_frame;
@@ -58,13 +60,12 @@ public class CVImageTest extends WPICameraExtension {
     CanvasFrame hue_mask2_win;
     CanvasFrame bin_frame;
     CanvasFrame hsv_frame;
-    static ThresholdSlider win;
-    static File file;
-    static WPIColorImage rawImage = null;
-    static WPIImage resultImage = null;
-    static boolean validImage;
+    ThresholdSlider win;
+    WPIColorImage rawImage = null;
+    WPIImage resultImage = null;
+    boolean validImage;
     //Grab Netowrk Table
-    public static NetworkTable SmartDashboard = NetworkTable.getTable("SmartDashboard");
+    NetworkTable SmartDashboard = NetworkTable.getTable("SmartDashboard");
     boolean circular = true;
     FrameRecorder robocam;
     boolean windowsVisible = true;
@@ -100,7 +101,6 @@ public class CVImageTest extends WPICameraExtension {
         WPIBinaryImage binWpi = DaisyExtensions.makeWPIBinaryImage(bin);
         contours = DaisyExtensions.findConvexContours(binWpi);
 
-        int centerPos = 160;
         boolean horzfound = false;
         boolean vertfound = false;
         boolean leftHorz = false;
@@ -274,27 +274,23 @@ public class CVImageTest extends WPICameraExtension {
         double ratio = ((double) c.getHeight()) / ((double) c.getWidth());
         works &= ratio < ratioUpper;
         works &= ratio > ratioLower;
-//        System.out.println("ratio: "+ratio+","+works);
         return works;
     }
 
     private boolean checkRange(int x, int lower, int upper) {
         boolean works=x > lower && x < upper;
-//        System.out.println("range: "+x+","+works);
         return x > lower && x < upper;
     }
 
     private boolean isHorizontal(WPIContour c) {
-//        System.out.println("****StartHorizontal******");
-        boolean isHorizontal = checkRange(c.getWidth(), kMinWidth, kMaxWidth);
-        isHorizontal &= checkRatio(c, .1, .4);
-//        System.out.println("****StopHorizontal******");
+        boolean isHorizontal = checkRange(c.getWidth(), horzMinWidth, horzMinHeight);
+        isHorizontal &= checkRatio(c, horzMinRatio, horzMaxRatio);
         return isHorizontal;
     }
 
     private boolean isVertical(WPIContour c) {
-        boolean isVertical = checkRange(c.getHeight(), kMinHeight, kMaxHeight);
-        isVertical &= checkRatio(c, 2, 8.5);
+        boolean isVertical = checkRange(c.getHeight(), vertMinHeight, vertMaxHeight);
+        isVertical &= checkRatio(c, vertMinRatio, vertMaxRatio);
         return isVertical;
     }
 
