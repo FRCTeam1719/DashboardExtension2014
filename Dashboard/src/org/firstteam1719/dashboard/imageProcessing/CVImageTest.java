@@ -1,14 +1,10 @@
 package org.firstteam1719.dashboard.imageProcessing;
-//TODO: Check for Memory Leaks
 
 import com.googlecode.javacv.CanvasFrame;
 import com.googlecode.javacv.FFmpegFrameRecorder;
 import com.googlecode.javacv.FrameRecorder;
-import com.googlecode.javacv.OpenCVFrameRecorder;
 import com.googlecode.javacv.cpp.opencv_core;
 import com.googlecode.javacv.cpp.opencv_core.*;
-import com.googlecode.javacv.cpp.opencv_highgui;
-import static com.googlecode.javacv.cpp.opencv_highgui.CV_FOURCC;
 import com.googlecode.javacv.cpp.opencv_imgproc;
 import com.googlecode.javacv.cpp.opencv_imgproc.*;
 import edu.wpi.first.smartdashboard.camera.WPICameraExtension;
@@ -18,7 +14,6 @@ import edu.wpi.first.wpijavacv.WPIColor;
 import edu.wpi.first.wpijavacv.WPIColorImage;
 import edu.wpi.first.wpijavacv.WPIContour;
 import edu.wpi.first.wpijavacv.WPIImage;
-import edu.wpi.first.wpijavacv.WPIPoint;
 import edu.wpi.first.wpijavacv.WPIPolygon;
 import edu.wpi.first.wpilibj.networktables.NetworkTable;
 import java.io.File;
@@ -29,9 +24,6 @@ import java.util.Date;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-/**
- * @author wjb adapted from jrussell
- */
 public class CVImageTest extends WPICameraExtension {
 
     //Constants that need to be tuned
@@ -40,7 +32,6 @@ public class CVImageTest extends WPICameraExtension {
     private static final int kMinHeight = 30;
     private static final int kMaxHeight = 100;
 
-//    
     // Store JavaCV temporaries as members to reduce memory management during processing
     private static CvSize size = null;
     private static WPIContour[] contours;
@@ -56,13 +47,7 @@ public class CVImageTest extends WPICameraExtension {
     private static IplImage hue_mask2;
     private static IplImage sat_mask;
     private static IplImage val_mask;
-    private static WPIPoint linePt1;
-    private static WPIPoint linePt2;
-    private static WPIPoint hLinePt3;
-    private static WPIPoint hLinePt4;
-    private static int horizontalOffsetPixels;
     //Canvas Framses for results
-    //TODO: Clenan up frames
     static CanvasFrame hue_win;
     static CanvasFrame morph_result;
     static CanvasFrame original;
@@ -80,20 +65,155 @@ public class CVImageTest extends WPICameraExtension {
     static boolean validImage;
     //Grab Netowrk Table
     public static NetworkTable SmartDashboard = NetworkTable.getTable("SmartDashboard");
-
-    boolean circular;
-
+    boolean circular = true;
     FrameRecorder robocam;
+    boolean windowsVisible = true;
 
     public CVImageTest() {
         super();
-        //Create thresholdSlider
-        win = new ThresholdSlider();
+        makeWindows();
+        setWindowsVisible(false);
+        DaisyExtensions.init();
+
+        //Conceptually, hue is a circular measurement
+        //This option toggles if the selected region is the area between the selectors, 
+        //or the area outside of the protectors
+        SmartDashboard.putBoolean("circular", circular);
         SmartDashboard.putBoolean("showWin", false);
-        //Create canvas frames
+    }
+
+    @Override
+    public WPIImage processImage(WPIColorImage rawImage) {
+        setWindowsVisible(SmartDashboard.getBoolean("showWin"));
+
+        CvSize newSize = opencv_core.cvSize(rawImage.getWidth(), rawImage.getHeight());
+        allocateBuffers(newSize);
+        IplImage input = DaisyExtensions.getIplImage(rawImage);
+        try {
+            robocam.record(input);
+        } catch (Exception e) {
+            System.err.println(e);
+        }
+        runMasks(input, circular);
+        drawWindows();
+
+        WPIBinaryImage binWpi = DaisyExtensions.makeWPIBinaryImage(bin);
+        contours = DaisyExtensions.findConvexContours(binWpi);
+
+        int centerPos = 160;
+        boolean horzfound = false;
+        boolean vertfound = false;
+        boolean leftHorz = false;
+        boolean rightHorz = false;
+        boolean leftVert = false;
+        boolean rightVert = false;
+        for (WPIContour c : contours) {
+            rawImage.drawContour(c, WPIColor.WHITE, 1);
+            boolean isHorizontal = isHorizontal(c);
+            boolean isVertical = isVertical(c);
+            boolean left = isLeft(c, centerPos);
+            if (isHorizontal) {
+                rawImage.drawContour(c, WPIColor.BLUE, 2);
+            }
+            if (isVertical) {
+                rawImage.drawContour(c, WPIColor.GREEN, 2);
+            }
+
+            horzfound |= isHorizontal;
+            vertfound |= isVertical;
+            leftHorz |= left && isHorizontal;
+            leftVert |= left && isVertical;
+            rightHorz |= !left && isHorizontal;
+            rightVert |= !left && isVertical;
+        }
+
+        SmartDashboard.putBoolean("found", horzfound && vertfound);
+        if (rightVert && rightHorz) {
+            SmartDashboard.putString("leftorright", "right");
+        } else if (leftVert && leftHorz) {
+            SmartDashboard.putString("leftorright", "left");
+        } else {
+            SmartDashboard.putString("leftorright", "unknown");
+        }
+        return rawImage;
+
+    }
+
+    /**
+     * Performs all of the masking operation on the input image Final result is written to the bin buffer
+     *
+     * @param input
+     * @param hueCircular
+     */
+    public void runMasks(IplImage input, boolean hueCircular) {
+        opencv_imgproc.cvCvtColor(input, hsv, opencv_imgproc.CV_BGR2HSV);
+        opencv_core.cvSplit(hsv, hue, sat, val, null);
+        if (hueCircular) {
+            opencv_imgproc.cvThreshold(hue, hue_mask, ThresholdSlider.hueLowerSlider.getValue(), 255, opencv_imgproc.CV_THRESH_BINARY); //everything above here we want
+            opencv_imgproc.cvThreshold(hue, hue_mask2, ThresholdSlider.hueUpperSlider.getValue(), 255, opencv_imgproc.CV_THRESH_BINARY_INV);
+            opencv_core.cvOr(hue_mask, hue_mask2, bin, null);
+        } else {
+            opencv_imgproc.cvThreshold(hue, hue_mask, ThresholdSlider.hueLowerSlider.getValue(), 255, opencv_imgproc.CV_THRESH_BINARY_INV); //everything above here we want
+            opencv_imgproc.cvThreshold(hue, hue_mask2, ThresholdSlider.hueUpperSlider.getValue(), 255, opencv_imgproc.CV_THRESH_BINARY);
+            opencv_core.cvAnd(hue_mask, hue_mask2, bin, null);
+        }
+        opencv_imgproc.cvThreshold(sat, sat_mask, ThresholdSlider.satSlider.getValue(), 255, opencv_imgproc.CV_THRESH_BINARY);
+        opencv_imgproc.cvThreshold(val, val_mask, ThresholdSlider.valSlider.getValue(), 255, opencv_imgproc.CV_THRESH_BINARY);
+
+        //Initialize bin
+//        opencv_core.cvSet(bin, CvScalar.ONE);
+        opencv_core.cvAnd(hue_mask, hue_mask, bin, null);
+        opencv_core.cvAnd(hue_mask, bin, bin, null);
+        opencv_core.cvAnd(bin, sat_mask, bin, null);
+        opencv_core.cvAnd(bin, val_mask, bin, null);
+    }
+
+    private void allocateBuffers(CvSize newSize) {
+        if (size == null || size.width()!=newSize.width() || size.height()!=newSize.height()) {
+            if (size != null) {
+                try {
+                    bin.release();
+                    hsv.release();
+                    hue.release();
+                    sat.release();
+                    val.release();
+                    hue_mask.release();
+                    hue_mask2.release();
+                    sat_mask.release();
+                    val_mask.release();
+                    robocam.release();
+                } catch (Exception ex) {
+                    System.err.println(ex);
+                }
+            }
+            size = newSize;
+            bin = IplImage.create(size, 8, 1);
+            hsv = IplImage.create(size, 8, 3);
+            hue = IplImage.create(size, 8, 1);
+            sat = IplImage.create(size, 8, 1);
+            val = IplImage.create(size, 8, 1);
+            hue_mask = IplImage.create(size, 8, 1);
+            hue_mask2 = IplImage.create(size, 8, 1);
+            sat_mask = IplImage.create(size, 8, 1);
+            val_mask = IplImage.create(size, 8, 1);
+            Date d = new Date();
+            DateFormat f = new SimpleDateFormat("yyyy_MM_dd_HH.mm.ss");
+            robocam = new FFmpegFrameRecorder("Robocam" + f.format(d) + ".avi", size.width(), size.height());
+            try {
+                robocam.start();
+            } catch (Exception ex) {
+                System.err.println(ex);
+            }
+        }
+    }
+
+    private void makeWindows() {
+        win = new ThresholdSlider();
+
         morph_result = new CanvasFrame("morph");
         morph_result.setLocation(900, 0);
         morph_result.setSize(300, 200);
+
         hue_win = new CanvasFrame("Hue");
         hue_win.setLocation(700, 200);
         hue_win.setSize(300, 200);
@@ -112,315 +232,73 @@ public class CVImageTest extends WPICameraExtension {
         hsv_frame = new CanvasFrame("HSV");
         hsv_frame.setLocation(400, 400);
 
-        //Hide all windows by default
-        morph_result.setVisible(false);
-        hue_win.setVisible(false);
-        hue_frame.setVisible(false);
-        sat_frame.setVisible(false);
-        val_frame.setVisible(false);
-        bin_frame.setVisible(false);
-        hue_mask1_win.setVisible(false);
-        hue_mask2_win.setVisible(false);
-        hsv_frame.setVisible(false);
-        win.setVisible(false);
-
-        //Circular or not circular hue slider
-        SmartDashboard.putBoolean("circular", true);
-        circular = SmartDashboard.getBoolean("circular");
-
-        if (ThresholdSlider.fileSelected()) {
-            System.out.println("Thresholder Slider.fileselected");
-            validImage = false;
-
-            original.showImage(rawImage.getBufferedImage());
-            validImage = true;
-            // Process image
-            resultImage = processImage(rawImage);
-            // Display results
-            hue_win.showImage(resultImage.getBufferedImage());
-        } //if
-
-        if (validImage && ThresholdSlider.get_imageUpdate()) {
-            ThresholdSlider.reset_imageUpdate();
-            System.out.println("validImage");
-            // Process image
-            resultImage = processImage(rawImage);
-
-            // Display results
-            hue_win.showImage(resultImage.getBufferedImage());
-
-        }
-    }   //main 
-//Image processing loop
-    boolean lastFrame = false;
-
-    @Override
-    public WPIImage processImage(WPIColorImage rawImage) {
-        //Get start time
-        long startTime = System.nanoTime();
-        //Initialize Daisy Extnesion
-        DaisyExtensions.init();
-
-        //Check if windows should be displayed
-        boolean thisFrame = SmartDashboard.getBoolean("showWin");
-
-        if (thisFrame != lastFrame && thisFrame) {
-
-            //Show windows
-            morph_result.setVisible(true);
-            hue_win.setVisible(true);
-            hue_frame.setVisible(true);
-            sat_frame.setVisible(true);
-            val_frame.setVisible(true);
-            bin_frame.setVisible(true);
-            hue_mask1_win.setVisible(true);
-            hue_mask2_win.setVisible(true);
-            hsv_frame.setVisible(true);
-            win.setVisible(true);
-
-        }//if
-        if (thisFrame != lastFrame && !thisFrame) {
-            //Hide windows
-            morph_result.setVisible(false);
-            hue_win.setVisible(false);
-            hue_frame.setVisible(false);
-            sat_frame.setVisible(false);
-            val_frame.setVisible(false);
-            bin_frame.setVisible(false);
-            hue_mask1_win.setVisible(false);
-            hue_mask2_win.setVisible(false);
-            hsv_frame.setVisible(false);
-            win.setVisible(false);
-        }
-        lastFrame = thisFrame;
-
-//Read values from sliders
-        if (ThresholdSlider.fileSelected()) {
-            System.out.println("Thresholder Slider.fileselected");
-            validImage = false;
-
-            original.showImage(rawImage.getBufferedImage());
-            validImage = true;
-            // Process image
-            resultImage = processImage(rawImage);
-            // Display results
-            //result.showImage(resultImage.getBufferedImage());
-        } //if
-        if (validImage && ThresholdSlider.get_imageUpdate()) {
-            ThresholdSlider.reset_imageUpdate();
-            System.out.println("validImage");
-            // Process image
-            resultImage = processImage(rawImage);
-
-            // Display results
-            //result.showImage(resultImage.getBufferedImage());
-        } //if  
-        //Alocate Images
-        if (size == null || size.width() != rawImage.getWidth() || size.height() != rawImage.getHeight()) {
-            size = opencv_core.cvSize(rawImage.getWidth(), rawImage.getHeight());
-            bin = IplImage.create(size, 8, 1);
-            hsv = IplImage.create(size, 8, 3);
-            hue = IplImage.create(size, 8, 1);
-            sat = IplImage.create(size, 8, 1);
-            val = IplImage.create(size, 8, 1);
-            hue_mask = IplImage.create(size, 8, 1);
-            hue_mask2 = IplImage.create(size, 8, 1);
-            sat_mask = IplImage.create(size, 8, 1);
-            val_mask = IplImage.create(size, 8, 1);
-            Date d = new Date();
-            DateFormat f = new SimpleDateFormat("yyyy_MM_dd_HH.mm.ss");
-            robocam = new FFmpegFrameRecorder("Robocam"+f.format(d)+".avi", size.width(), size.height());
-            try {
-                robocam.start();
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            }
-        }        // Get the raw IplImages for OpenCV
-        IplImage input = DaisyExtensions.getIplImage(rawImage);
-        try {
-            robocam.record(input);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        WPIColorImage output = new WPIColorImage(rawImage.getBufferedImage());
-        // Convert to HSV color space and split into components
-        opencv_imgproc.cvCvtColor(input, hsv, opencv_imgproc.CV_BGR2HSV);
-        opencv_core.cvSplit(hsv, hue, sat, val, null);
-
-        //Show windows if necessary
-        if (SmartDashboard.getBoolean("showWin")) {
-            hsv_frame.showImage(hsv.getBufferedImage());
-            hue_win.showImage(hue.getBufferedImage());
-        };
-
-        // NOTE: colors like green in the middle of the color space, require ANDing together
-        // a threshold and inverted threshold in order to get points that are in a narrow range
-        // values above threshold are converted to white(255) and values below are converted to black(0)
-        //red is 0 to maybe 45.  green 50-75 range
-        //Hue
-        hueSlider(circular);
-        // Saturation
-        opencv_imgproc.cvThreshold(sat, sat_mask, ThresholdSlider.satSlider.getValue(), 255, opencv_imgproc.CV_THRESH_BINARY); // high color sat is larger #
-
-        // Value
-        opencv_imgproc.cvThreshold(val, val_mask, ThresholdSlider.valSlider.getValue(), 255, opencv_imgproc.CV_THRESH_BINARY); // brightest is larger #
-
-        if (SmartDashboard.getBoolean("showWin")) {
-            //Display hue masks before anding
-            hue_mask1_win.showImage(hue_mask.getBufferedImage());
-            hue_mask2_win.showImage(hue_mask2.getBufferedImage());
-        }//if
-        // Combine the results to obtain our binary image which should for the most
-        // part only contain pixels that we care about
-
-        combineHue(circular);
-        //Initialize bin
-        opencv_core.cvAnd(hue_mask, hue_mask, bin, null);
-        //Combine images
-        opencv_core.cvAnd(hue_mask, bin, bin, null);
-        opencv_core.cvAnd(bin, sat_mask, bin, null);
-        opencv_core.cvAnd(bin, val_mask, bin, null);
-
-        // Uncomment the line below to see resultant image after masking
-//        result.showImage(bin.getBufferedImage());
-        if (SmartDashboard.getBoolean("showWin")) {
-            //Show bin and hue before morphology is applied
-            bin_frame.showImage(bin.getBufferedImage());
-            hue_frame.showImage(hue_mask.getBufferedImage());
-        }
-
-        //Show windows if necessary
-        if (SmartDashboard.getBoolean("showWin")) {
-            //show morphology 
-            morph_result.showImage(bin.getBufferedImage());
-            //Display saturation and value masks
-            sat_frame.showImage(sat_mask.getBufferedImage());
-            val_frame.showImage(val_mask.getBufferedImage());
-        }//if
-        //Find Contours
-        WPIBinaryImage binWpi = DaisyExtensions.makeWPIBinaryImage(bin);
-        contours = DaisyExtensions.findConvexContours(binWpi);
-
-        //Array for storying contours that match our ratios
-        polygons = new ArrayList<WPIPolygon>();
-
-        //Array for storing X/Y values
-        int positions[] = new int[2];
-        //Boolean for the Xc center of the image
-        int centerPos = 160;
-        //Boolean for finding objects
-        boolean horzfound = false;
-        boolean vertfound = false;
-        boolean leftHorz = false;
-        boolean rightHorz = false;
-        boolean leftVert = false;
-        boolean rightVert = false;
-        //Check if any of our contrours match
-        for (WPIContour c : contours) {
-            //Ratios
-            double ratio = ((double) c.getHeight()) / ((double) c.getWidth());
-            //Draw all contours whte
-            rawImage.drawContour(c, WPIColor.WHITE, 1);
-
-            //Check if it matches the ratio and width meet the horizontal bar
-            if (ratio < .4 && ratio > .2 && c.getWidth() > kMinWidth && c.getWidth() < kMaxWidth) {
-                //Check if it's on the left or the right
-                if (c.getX() >= centerPos) {
-                    rightHorz = true;
-                } else {
-                    leftHorz = true;
-                }
-
-                System.out.println("(horz) ratio = " + ratio + " width = " + c.getWidth() + "   height = " + c.getHeight() + " Position  = " + c.getX());
-                //Add this contour to the polygon array
-                polygons.add(c.approxPolygon(20));
-                //Draw this contour blue
-                rawImage.drawContour(c, WPIColor.BLUE, 2);
-                horzfound = true;
-
-            }
-            //Check if contour matches the ratioj and height for the verticle bar
-            if (ratio != 1) {
-                System.out.println("(vert) ratio = " + ratio + " width = " + c.getWidth() + "   height = " + c.getHeight() + "Position = " + c.getX());
-            }
-            if (ratio < 8 && ratio > 2 && c.getHeight() > kMinHeight && c.getWidth() < kMaxHeight) {
-                //Check if it's on the left or the right
-                if (c.getX() >= centerPos) {
-                    rightVert = true;
-                } else {
-                    leftVert = true;
-                }
-                //Add to the polygon array
-                polygons.add(c.approxPolygon(20));
-                //Draw it green
-                rawImage.drawContour(c, WPIColor.GREEN, 2);
-                vertfound = true;
-
-            }
-
-            //Line break in the printstream
-            System.out.println("\n");
-        }//for
-
-        //If it finds both bars
-        if (horzfound && vertfound) {
-
-            SmartDashboard.putBoolean("found", true);
-            //Left or right logic
-            if (rightVert && rightHorz) {
-                SmartDashboard.putString("leftorright", "right");
-            } else if (leftVert && leftHorz) {
-                SmartDashboard.putString("leftorright", "left");
-            } else {
-                SmartDashboard.putString("leftorright", "unknown");
-            }
-            //Tell us which bar we are not fiding
-        } else if (horzfound && !vertfound) {
-            SmartDashboard.putBoolean("found", false);
-            System.out.println("vert not found \n");
-        } else if (!horzfound && vertfound) {
-            System.out.println("horz not found");
-            SmartDashboard.putBoolean("found", false);
-        } else {
-            SmartDashboard.putBoolean("found", false);
-
-            System.out.println("Target(s) not founds");
-        } //else
-
-        //Release memory
-        DaisyExtensions.releaseMemory();
-
-        //Read end time
-        System.out.println("Elapsed Loop Time: " + (System.nanoTime() - startTime));
-
-        return rawImage;
-
     }
 
-    //Circular hue slider methods
-    public void hueSlider(boolean circular) {
-
-        if (circular) {
-            opencv_imgproc.cvThreshold(hue, hue_mask, ThresholdSlider.hueLowerSlider.getValue(), 255, opencv_imgproc.CV_THRESH_BINARY); //everything above here we want
-
-            opencv_imgproc.cvThreshold(hue, hue_mask2, ThresholdSlider.hueUpperSlider.getValue(), 255, opencv_imgproc.CV_THRESH_BINARY_INV);
-        } else if (!circular) {
-            opencv_imgproc.cvThreshold(hue, hue_mask, ThresholdSlider.hueLowerSlider.getValue(), 255, opencv_imgproc.CV_THRESH_BINARY_INV); //everything above here we want
-
-            opencv_imgproc.cvThreshold(hue, hue_mask2, ThresholdSlider.hueUpperSlider.getValue(), 255, opencv_imgproc.CV_THRESH_BINARY);
-
+    private void setWindowsVisible(boolean isVisible) {
+        if (isVisible == windowsVisible) {
+            /**
+             * If we do not need to do anything, Bale out early to prevent flickering
+             */
+            return;
         }
-
+        windowsVisible = isVisible;
+        morph_result.setVisible(isVisible);
+        hue_win.setVisible(isVisible);
+        hue_frame.setVisible(isVisible);
+        sat_frame.setVisible(isVisible);
+        val_frame.setVisible(isVisible);
+        bin_frame.setVisible(isVisible);
+        hue_mask1_win.setVisible(isVisible);
+        hue_mask2_win.setVisible(isVisible);
+        hsv_frame.setVisible(isVisible);
+        win.setVisible(isVisible);
     }
 
-    public void combineHue(boolean circular) {
-        if (circular) {
-            opencv_core.cvOr(hue_mask, hue_mask2, bin, null);
-        } else if (!circular) {
-            opencv_core.cvAnd(hue_mask, hue_mask2, bin, null);
+    private void drawWindows() {
+        if (!windowsVisible) {
+            return;
         }
-
+        hue_mask1_win.showImage(hue_mask.getBufferedImage());
+        hue_mask2_win.showImage(hue_mask2.getBufferedImage());
+        hsv_frame.showImage(hsv.getBufferedImage());
+        hue_win.showImage(hue.getBufferedImage());
+        bin_frame.showImage(bin.getBufferedImage());
+        hue_frame.showImage(hue_mask.getBufferedImage());
+        morph_result.showImage(bin.getBufferedImage());
+        sat_frame.showImage(sat_mask.getBufferedImage());
+        val_frame.showImage(val_mask.getBufferedImage());
     }
 
+    private boolean checkRatio(WPIContour c, double ratioLower, double ratioUpper) {
+        boolean works = true;
+        double ratio = ((double) c.getHeight()) / ((double) c.getWidth());
+        works &= ratio < ratioUpper;
+        works &= ratio > ratioLower;
+//        System.out.println("ratio: "+ratio+","+works);
+        return works;
+    }
+
+    private boolean checkRange(int x, int lower, int upper) {
+        boolean works=x > lower && x < upper;
+//        System.out.println("range: "+x+","+works);
+        return x > lower && x < upper;
+    }
+
+    private boolean isHorizontal(WPIContour c) {
+//        System.out.println("****StartHorizontal******");
+        boolean isHorizontal = checkRange(c.getWidth(), kMinWidth, kMaxWidth);
+        isHorizontal &= checkRatio(c, .1, .4);
+//        System.out.println("****StopHorizontal******");
+        return isHorizontal;
+    }
+
+    private boolean isVertical(WPIContour c) {
+        boolean isVertical = checkRange(c.getHeight(), kMinHeight, kMaxHeight);
+        isVertical &= checkRatio(c, 2, 8.5);
+        return isVertical;
+    }
+
+    private boolean isLeft(WPIContour c, int centerPos) {
+        return c.getX() < centerPos;
+    }
 }

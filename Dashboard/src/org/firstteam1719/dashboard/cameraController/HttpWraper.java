@@ -4,6 +4,7 @@
  */
 package org.firstteam1719.dashboard.cameraController;
 
+import java.io.IOException;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.ClientProtocolException;
@@ -30,18 +31,14 @@ public class HttpWraper {
     }
 
     public static void send(String url) {
-        
         try {
-            
             HttpGet httpGet = new HttpGet(url);
             httpClient.execute((HttpUriRequest) httpGet);
-            
         } catch (ClientProtocolException e) {
            //cammera sends back invalid headers
-        } catch(Exception e){
-            e.printStackTrace();
-        }finally {
-            
+           //This does not cause an actual problem because the camera still sees the request
+        } catch(IOException e){
+            System.out.println(e);
         }
     }
 }
