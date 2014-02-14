@@ -21,6 +21,7 @@ public class Daemon extends Thread {
             try {
                 writer = new FileWriter("robotlogs.txt", true);
                 String tempMessage = SmartDashboard.getString("Log");
+                System.out.println("Log added: "+tempMessage);
                 writer.write(tempMessage);
                 writer.close();
             } catch ( FileNotFoundException | UnsupportedEncodingException ex) {
