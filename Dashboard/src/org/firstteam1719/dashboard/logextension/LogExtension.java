@@ -16,16 +16,6 @@ public class LogExtension extends StaticWidget {
 
     @Override
     public void init() {
-        System.out.println("Log initializing");
-        NetworkTable.setClientMode();
-        NetworkTable.setIPAddress("10.17.19.2");
-        try {
-            NetworkTable.initialize();
-        } catch (IOException ex) {
-            System.err.println(ex);
-        }
-        NetworkTable SmartDashboard = NetworkTable.getTable("SmartDashboard");
-        SmartDashboard.putString("Log", "");
         Daemon runner = new Daemon();
         runner.start();
     }
